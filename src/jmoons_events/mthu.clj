@@ -2,6 +2,7 @@
 
 (defn rmod   "" [ x y]  (- x (* (Math/floor (/ x y)) y) )  )
 (defn ifloor "" [x]     (int (Math/floor x)) )
+(defn iround "" [x]     (int (Math/round x)) )
 
 (defn getDate
   " julian date to year,month,day,hour,minute,second UTC --  Meeus ch. 7"
@@ -34,3 +35,22 @@
 
 (defn getTimeHMS [t]
   (let [[y mn d h mt s] (getDate t)]    (format "%2d:%02d %2d" h mt s)  ))
+
+(defn getYMD [t]
+  (let [[y mn d h mt s] (getDate t)]  (format "%4d-%02d-%02d " y mn d)) )
+
+
+(defn get-jd "convert date-time to julian (arity-overloaded)"
+  ([v]
+     (let [[y m d h mn s]  v]  (get-jd  y m d  h mn s)) )
+  
+  ([y m d h mn s]  ;; from J.Meeus via  T. Alonso Albi - OAN (Spain)
+     (let [[Y M]  (if (< m 3)   [(dec y) (+ m 12)]   [y m] )
+           A      (int (/ Y 100))
+           B      (+ (- 2 A)  (/ A 4))
+           dayFraction  (/ (+ h (/ (+ mn (/ s 60.0)) 60.0)) 24.0)
+           jd     (+ dayFraction
+                     (int (* 365.25 (+ Y 4716)))
+                     (int (* 30.6001 (+ M 1)))
+                     d  B  -1524.5)    ]
+    jd) )    )     ;;Assert jd not in 2299150.0..2299160.0 !
