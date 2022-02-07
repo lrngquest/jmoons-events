@@ -84,14 +84,12 @@
 (def LIGHT_DAYS_PER_AU 0.005775518328) ;AstroConstants
 
 (defn lightDelayT2 "" [planet timeJDE]
-  (loop [distance (:radius (getEclipticPosition planet timeJDE))   i 0]
-    (if (> i 2)
-      (- timeJDE (* LIGHT_DAYS_PER_AU distance)) ;"return"
-      (recur (:radius
-              (getEclipticPosition planet
-                                   (- timeJDE (* LIGHT_DAYS_PER_AU distance)) ))
-             (inc i) )  )  )
-  );; test OK Dec20
+  (let [dist  (reduce  (fn [distance v]
+     (:radius (getEclipticPosition  planet
+                 (- timeJDE (* LIGHT_DAYS_PER_AU distance)) ))    )
+                       (:radius (getEclipticPosition planet timeJDE))
+                       (range 3) ) ]
+    (- timeJDE (* LIGHT_DAYS_PER_AU dist)) ) )
 
 (defn calcLightDelay "" [planet timeJDE]
   (- timeJDE (lightDelayT2 planet timeJDE)) )

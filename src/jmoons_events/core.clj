@@ -16,8 +16,8 @@
 (ns jmoons-events.core
   (:import 
     (javax.swing JFrame JPanel Timer)
-    (java.awt Color Dimension  Font)
-    (java.awt.event ActionListener  MouseListener)
+    (java.awt Color Dimension  Font  FontMetrics)
+    (java.awt.event ActionListener  MouseListener MouseEvent)
     (java.time Instant ZoneOffset OffsetDateTime)  ) ;; ==> Java 8 reqd.
   (:require [jmoons-events.planetarymoons :as pm])
   (:require [jmoons-events.jupmoons :as jm] )
@@ -51,7 +51,7 @@
 
 
 ;; basics for display of Jupiter, moons, shadows
-(def Dheight 150)   (def Dwidth 800)  ;; arbitrary?
+(def Dheight 150)   (def Dwidth 800) ;; arbitrary?
 (def yctr  (/ Dheight 2))  (def xctr  (/ Dwidth 2))
 
 (def discWidth  (/ Dwidth  28.0))  ;; Jupiter baseRadiusWidth
@@ -63,17 +63,17 @@
 (def label-font (Font. "SansSerif" Font/PLAIN 10) )
 (def time-font  (Font. "SansSerif" Font/BOLD  12) )
 
-(defn draw-shadow "" [g vpos]
+(defn draw-shadow "" [^sun.java2d.SunGraphics2D g  vpos]
   (let [[pos sunpos] vpos
         ptx  (+ xctr (m/iround (* (:x sunpos) radius) ))
         pty  (- yctr (m/iround (* (:y sunpos) radius) )) ]
     (when (:inFront sunpos)
       (.setColor g Color/black)  (.fillRect g  (dec ptx) (dec pty) 3 3) )   ) )
 
-(defn draw-moon-and-label "" [g vpos]
+(defn draw-moon-and-label "" [^sun.java2d.SunGraphics2D g  vpos]
   (let [[pos sunpos] vpos
-        ptx           (+ xctr (m/iround (* (:x pos) radius) ))
-        pty           (- yctr (m/iround (* (:y pos) radius) ))
+        ^long ptx     (+ xctr (m/iround (* (:x pos) radius) ))
+        ^long pty     (- yctr (m/iround (* (:y pos) radius) ))
         ml-color      (cond  (:behind  sunpos)  Color/blue     ;; eclipsed
                              (:inFront pos)     Color/gray     ;; transit
                              :else              Color/white )
@@ -112,15 +112,15 @@
 
 (def f-fm (atom {:key-font 0  :kfm 0 }) )
 
-(defn init "init font fontmetrics" [jfrm]
+(defn init "init font fontmetrics" [ ^JFrame jfrm]
   (let [kfnt  (Font. "Helvetica" Font/PLAIN  11) ]
     (swap! f-fm assoc :key-font kfnt  :kfm (.getFontMetrics jfrm kfnt) ) ))
 
 (def WINDOW_HEIGHT (+ Dheight 10 (((keyinfo 0)0)3) 10 ))
 
-(defn draw-string "" [g s rect fg bg fm]
-  (let [[rx ry wd ht]  rect
-        descent      (.getMaxDescent fm)
+(defn draw-string "" [ ^sun.java2d.SunGraphics2D g  ^String s
+                      [rx ry wd ht] fg bg  ^FontMetrics fm]
+  (let [descent      (.getMaxDescent fm)
         sheight      (.getHeight     fm)
         swidth       (.stringWidth   fm  s) ]
     (.setColor g (bg colormap) ) ;; was color[ fg]
@@ -129,7 +129,7 @@
     (.drawString g s  (int(+ rx (/ (- wd swidth) 2)))
                  (int (+ ry (/ (- (* 2 ht) sheight) 2) descent)) )    )   )
 
-(defn draw-btns "" [g]
+(defn draw-btns "" [ ^sun.java2d.SunGraphics2D g]
   (.setColor g (:dk-grey colormap) )
   (.fillRect g 0 Dheight  Dwidth  (- WINDOW_HEIGHT Dheight) )
   (.setFont g (:key-font @f-fm))
@@ -140,9 +140,9 @@
 
 ;; gui "framework"
 (defn viz-panel [frame ]
-  (let [panel (proxy [JPanel ActionListener   MouseListener] []
+  (let [panel (proxy [ JPanel ActionListener   MouseListener] []
         
-                (paintComponent [ g]
+                (paintComponent [ ^sun.java2d.SunGraphics2D g]
                   (let [t               (:t @sim-tse)
                         vvpos           (->> (get1t1ld2pos t)   (shapeS ) )
                         [y mn d h m s]  (m/getDate t)    ]
@@ -155,7 +155,7 @@
                     (.drawString
                      g
                      (format "UTC %4d-%02d-%02d  %2d:%02d" y mn d h m)
-                     (- Dwidth 200) (- Dheight 10))
+                     (int(- Dwidth 200)) (int(- Dheight 10)))
 
                     (.setColor g jupiterColor)
                     (.fillOval g                    ;;draw planet
@@ -171,15 +171,15 @@
                 (actionPerformed [e]  ;; timer tick
                   (let [{:keys [t step ena] }   @sim-tse ]
                     (when (= 1 ena) (swap! sim-tse assoc :t (+ t step)) ) )
-                  (.repaint this) )
+                  (.repaint ^JPanel this) )
 
-                (mouseClicked [e]
+                (mouseClicked [^MouseEvent e]
                   (let [x  (.getX e)
                         y  (.getY e) 
                         kirow  (first (filter (partial ffn x y) keyinfo)) ]
                     (when kirow 
                       (reset! sim-tse ((kirow 3)))
-                      (.repaint this) )  )     )
+                      (.repaint ^JPanel this) )  )     )
                 (mousePressed [e] )  (mouseReleased[e] ) (mouseEntered [e] )
                 (mouseExited  [e] )                
                 ) ]
@@ -189,10 +189,10 @@
 (def millis 100)
 
 (defn vizfn [] 
-  (let [frame (JFrame. "Galilean Moons of Jupiter")
-        _     (init frame)
-        panel (viz-panel frame )
-        timer (Timer. millis panel) ]
+  (let [frame           (JFrame. "Galilean Moons of Jupiter")
+        _               (init  frame)
+        ^JPanel panel   (viz-panel  frame )
+        timer           (Timer. millis panel) ]
     (doto panel 
       (.setFocusable true)      
       (.addMouseListener panel )   )
@@ -205,11 +205,11 @@
 
 
 (defn eventFinder "events text output" [startJDU endJDU]
-  (loop [s 0   t (/ (Math/floor (* startJDU 1440.0)) 1440.0) ]
-    (if (>= t endJDU)
-      s
-      (recur  (inc s)  (+ t (/ (pm/getEventsForOneMinuteSpan t) 1440.0)) ) )
-    ) )
+  (reduce (fn [t v]
+            (if (>= t endJDU)  (reduced v)
+                (+ t (/ (pm/getEventsForOneMinuteSpan t) 1440.0))) 
+             )  ;; --v t0                            ---v v0
+          (/ (Math/floor (* startJDU 1440.0)) 1440.0)   (range  10000) )   )
 
 
 (defn -main [ & args]
