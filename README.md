@@ -29,23 +29,24 @@ See also notice in  core.clj.
 ## Usage
 
 Normal GUI operation  (from dir containing  src/... )
+    ```
     $ lein run                     # start at 00:00 UTC current date
     $ lein run  [year month day ]  # start at 00:00 UTC indicated date
-
+    ```
 Text output from CLI
-    $ lein run  [year month day N ]  # list N days' events at indicated date
+    `$ lein run  [year month day N ]  # list N days' events at indicated date
 
 Developed originally with Leiningen but nowadays one can use:
-    $ clojure -M -m jmoons-events.core
+    `$ clojure -M -m jmoons-events.core
 
 
 ## Examples
-
+   ```
    jmoons-events EdV$ lein run 2022 2 8 1
 2022-02-08   UT
 [15:14 55  I. Oc.D]
 [17:58 55  I. Ec.R]
-
+   ```
 
 ### Bugs
 Any discrepancies from SykviewCafe results are my responsibility.
