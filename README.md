@@ -29,14 +29,17 @@ See also notice in  core.clj.
 ## Usage
 
 Normal GUI operation  (from dir containing  src/... )
+
     ```
     $ lein run                     # start at 00:00 UTC current date
     $ lein run  [year month day ]  # start at 00:00 UTC indicated date
     ```
 Text output from CLI
+
     `$ lein run  [year month day N ]  # list N days' events at indicated date
 
 Developed originally with Leiningen but nowadays one can use:
+
     `$ clojure -M -m jmoons-events.core
 
 
